@@ -1,225 +1,136 @@
-<p align="center">
-  <a href="https://open.mcd.cn/mcp" target="_blank">
-    <img src="./images/M-CODE-banner.png" align="middle" width = "1000" />
-  </a>
-</p>
+# mcd-deal-detective
 
-# 介绍
+> 🏅 麦当劳程序员创意开发大赛（M-CODE）参赛项目
+> 基于麦当劳中国 MCP 能力开发的 Skill。
 
-## 本次活动是什么？
+一个运行在 AI 客户端中的 Skill，通过麦当劳中国 MCP 拉取实时数据，帮用户完成餐品查询、优惠核对与下单辅助，把分散在多个入口的信息汇总到一次对话里。
 
-本次活动是麦当劳程序员创意开发大赛！
+## 项目介绍
 
-我们面向中国大陆地区的开发者发起邀请：基于麦当劳 MCP 能力，开发属于自己的 Skill，让创意真正解决现实问题，还有机会赢取程序员节专属好礼。
+- **要解决的问题：** 麦当劳的餐品、价格、优惠券、活动、积分等信息分散在多个入口，人工逐个查看、比对的成本较高，且信息随时变动。
+- **核心思路：** 将麦当劳 MCP 提供的多个 Tool 编排成固定流程，由 AI 在一次对话中按统一口径完成检索、比对与结论输出。
+- **和「直接问 AI」的区别：** 直接询问大模型只能基于既有知识作答，价格、库存、券状态等实时信息容易失真；本 Skill 要求先通过 MCP 取得实时数据再作答。
 
-## 你可以开发什么？
+### 能力一览
 
-套餐推荐助手、麦门省钱助手、麦麦活动推荐助手等。麦当劳 MCP 提供基础能力，你可以创造更多使用场景，开发兼具创意与实用价值的 Skill。
+| 能力 | 说明 | 依赖的 MCP Tool |
+|---|---|---|
+| 门店与菜单查询 | 查询附近或指定门店的可售卖餐品、套餐组成与营养信息 | `query-nearby-stores`、`query-meals`、`query-meal-detail`、`list-nutrition-foods` |
+| 优惠核对与价格试算 | 汇总账户优惠券与门店可用券，计算优惠金额与应付总价 | `query-my-coupons`、`query-store-coupons`、`available-coupons`、`calculate-price` |
+| 订单与积分 | 查询历史订单、订单状态与积分账户信息 | `order-list`、`query-order`、`query-my-account` |
 
-## 赛事时间
+### 亮点
 
-以下时间均为北京时间：
+1. **实时数据优先** —— 结论全部来自 MCP 实时返回，不依赖模型记忆中的旧数据。
+2. **多步流程自动化** —— 门店定位、菜单查询、优惠券核对、价格试算在一次对话内完成。
+3. **流程与规则分离** —— Skill 定义调用流程，业务规则集中维护，便于调整与扩展。
 
-| 阶段 | 时间 |
-|---|---|
-| 报名及排名 | 2026年10月9日10:30—10月25日23:59 |
-| 奖品兑换及信息提交截止时间 | 2026年11月14日 |
-| 奖励发放 | 提交收货信息后约2周内 |
+## 目标用户
 
-排名规则、赛事奖励及注意事项等，请参见 [activityGuidelines.md](./activityGuidelines.md)。
+- 希望在同一个对话窗口中完成麦当劳餐品查询、优惠核对与下单辅助的顾客。
+- 使用 WorkBuddy / Cursor / Cherry Studio / TRAE 等支持 MCP 的 AI 客户端的开发者。
 
-## 官方渠道说明
+## 安装方法
 
-麦当劳 GitHub 官方账号及该账号下的本活动仓库是本活动的活动规则发布、报名和排行榜展示的官方渠道。与本活动相关的报名要求、资格审核、排行榜及公开发布的活动通知，均以麦当劳 GitHub 官方账号或该账号下的本活动仓库发布的信息为准。请注意识别信息发布账号及仓库来源，谨防虚假活动、非官方报名或兑奖链接。如有疑问，请查阅完整活动规则或按照活动规则载明的联系方式进行核实。
+### 前置条件
 
-## 使用 WorkBuddy 开发 Skill
+1. 申请麦当劳中国 MCP Token：登录 [麦当劳 MCP 开放平台](https://open.mcd.cn/mcp) → 控制台 → 激活 → 复制 Token
+   （图文步骤见 [mcd-mcp-server 使用指南](https://github.com/M-China/mcd-mcp-server)）
+2. 一个支持 MCP 的客户端，例如 [WorkBuddy](https://www.workbuddy.cn/) / Cursor / Cherry Studio / TRAE / VSCode
 
-WorkBuddy 是本次活动的官方合作伙伴。我们推荐参赛者使用 WorkBuddy 开发 Skill，高效完成创意构思、开发与调试，有机会获得WorkBuddy积分奖励。立即访问 [WorkBuddy 官网](https://www.workbuddy.cn/?fromSource=gwzcw.22245487.22245487.22245487&utm_medium=cpc&utm_id=gwzcw.22245487.22245487.22245487)，开启你的 Skill 创作！
+### 第一步：接入 MCP Server
 
----
+复制仓库根目录的 [`mcp-config.example.json`](./mcp-config.example.json)，填入你的 Token 后导入客户端：
 
-# 参与方式
-
-## 注册 MCP
-
-> 📖 MCP 使用指南：[麦当劳 MCP Server GitHub 使用指南](https://github.com/M-China/mcd-mcp-server)
-
-- 第一步：点击右上角【登录】按钮
-
-  <div class="img"><img src="./images/image1.jpg" alt="" width="1000" /></div>
-
-- 第二步：跳转至登录页面，使用手机号完成验证登录
-
-  <div class="img"><img src="./images/image2.png" alt="" width="1000" /></div>
-
-  登录成功后将返回首页，右上角的“登录”按钮将变为“控制台”
-
-  <div class="img"><img src="./images/image3.jpg" alt="" width="1000" /></div>
-
-- 第三步：申请 MCP Token
-
-  点击右上角“控制台”，打开控制台弹窗。
-
-  点击“激活”按钮，申请 MCP Token。
-
-  <div class="img"><img src="./images/image4.png" alt="" width="1000" /></div>
-
-- 第四步：阅读并同意服务协议
-
-  <div class="img"><img src="./images/image5.png" alt="" width="1000" /></div>
-
-- 第五步：MCP Token 申请成功后，可一键复制
-
-  <div class="img"><img src="./images/image6.png" alt="" width="1000" /></div>
-
-## WorkBuddy 开发指南
-
-- **前置条件：** 需申请到麦当劳中国的 MCP Token
-- **参考文档：** [WorkBuddy 官方文档](https://www.workbuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/Connector)
-
-1. 打开 WorkBuddy，在左侧边栏【专家·技能·连接器】，选中【连接器】页签
-2. 点击右上角【自定义连接器】→【配置MCP】
-3. 在打开的手动配置页面中填入以下 JSON 内容：
-
-   ```json
-   {
-     "mcpServers": {
-       "mcd-mcp": {
-         "type": "streamablehttp",
-         "url": "https://mcp.mcd.cn",
-         "headers": {
-           "Authorization": "Bearer YOUR_MCP_TOKEN"
-         }
-       }
-     }
-   }
-   ```
-
-   > ⚠️ **一定记得替换 `YOUR_MCP_TOKEN` 为实际 MCP Token，点击【保存】！**
-
-4. 回到【自定义连接器】，将 mcd-mcp【启用】。接下来，即可在对话框中输入需求，让 AI 调用相应工具。
-
-## 开发 Skill
-
-参与者可以基于麦当劳现有的 MCP 能力，结合创意场景，开发具有创意或实用价值的 Skill 项目。为确保项目能够顺利报名，项目仓库应包含以下内容：
-
-| 序号 | 文件名称 | 说明 | 是否必须 |
-|:---:|---|---|---|
-| 1 | README.md | 项目介绍、安装方法、使用示例和目标用户 | 必须，文件名不可改动 |
-| 2 | [CONTEST_DECLARATION.md](./CONTEST_DECLARATION.md) | 参赛声明，包括原创性、合规性和敏感信息声明，防止项目被直接盗用 | **必须，文件名及内容均不可改动** |
-| 3 | MCP_INTEGRATION.md | 说明实际使用的麦当劳 MCP Server、Tool、调用流程和业务价值 | 必须，文件名不可改动 |
-| 4 | 源代码 | 项目主体代码或可运行内容 | 必须，形式不限 |
-| 5 | workbuddy.md | 使用 WorkBuddy 开发时的对话上下文，用于核验是否符合联动活动奖励条件，可自行导出 | 非必须；参加 WorkBuddy 专项奖励时必须提交，文件名不可改动 |
-
-> ⚠️ **重要：每个参赛项目必须包含 [`CONTEST_DECLARATION.md`](./CONTEST_DECLARATION.md)，且文件内容不可修改。建议参与者直接使用本官方项目提供的文件。**
-
-## 将项目上传至 GitHub 并设为公开
-
-> 后续文档截图均为示例。
-
-<div class="img"><img src="./images/image7.png" alt="" width="1000" /></div>
-
-## 通过 Issue 报名
-
-按照标准格式，在活动项目下发布 Issue。格式如下：
-
-```text
-Issue 标题：自定义报名标题
-Issue 正文：
-【参赛申请】
-项目名称：{项目名称}
-项目地址：{项目 GitHub 仓库地址}
-项目简介：{项目简介}
+```json
+{
+  "mcpServers": {
+    "mcd-mcp": {
+      "type": "streamablehttp",
+      "url": "https://mcp.mcd.cn",
+      "headers": {
+        "Authorization": "Bearer ${MCD_MCP_TOKEN}"
+      }
+    }
+  }
+}
 ```
-> **⚠️ 重要：由于报名 Issue 的校验逻辑较为严格，建议参赛者们注意以下情况：**
-> - **报名Issue的【标题】和【正文】之间暂不要使用换行符，如【项目简介】和【项目简介内容】之间暂不要使用换行符**
-> - **项目地址链接暂不要使用 Markdown 格式组织文本**
 
-<div class="img"><img src="./images/image8.png" alt="" width="1000" /></div>
+> ⚠️ 请通过环境变量注入 Token，**不要**把真实 Token 提交到仓库。
 
-### （1）报名条件
+### 第二步：安装 Skill
 
-- 项目中包含规定的文件，且指定文件名符合要求
-- 按照标准格式发布报名 Issue
-- GitHub 项目为公开可访问的 Public 仓库
-- 项目名称及项目内容不包含违法违规或敏感内容
-- 项目创建时间为2025年12月25日00:00至2026年10月25日23:59
+将 `SKILL.md` 放入客户端的 Skill 目录：
 
-> 关于项目创建时间的说明：2025年12月25日是麦当劳 MCP 正式上线的日期。我们欢迎已有技术沉淀的优秀项目参与本次比赛，为广大开发者提供更多交流与学习的机会。
+| 作用域 | 路径 |
+|---|---|
+| 用户级（所有项目可用） | `~/.workbuddy/skills/mcd-deal-detective/` |
+| 项目级 | `{workspace}/.workbuddy/skills/mcd-deal-detective/` |
 
-### （2）报名成功
+放置后在客户端启用，即可在对话中触发。
 
-报名成功后，系统将在报名 Issue 下回复成功通知。
+### 第三步：验证
 
-<div class="img"><img src="./images/image9.png" alt="" width="1000" /></div>
+在对话框中输入一句最简单的需求，确认 MCP 正常返回数据（例如「查一下我附近有哪些麦当劳门店」）。
 
-### （3）报名失败后重新报名
+## 使用示例
 
-如果因不满足条件导致报名失败，系统也会在报名 Issue 下回复失败原因。完成相应修改后，你可以重新提交 Issue。
+**示例 1**
 
-<div class="img"><img src="./images/image10.png" alt="" width="1000" /></div>
+> 用户输入：
 
-## 项目排名
+```
+查一下我附近有哪些麦当劳门店
+```
 
-活动开始后，麦当劳将定时采集报名成功项目的**公开 Star 数据**。**Star 数大于0**的项目将按照排名规则进入排行榜，参赛者可在活动主项目的`RANKING.md`文件中查看项目排名。
+> 输出：
 
-- 排行榜仅展示排名前100的项目；如第100名存在多个Star数相同的项目，则所有并列项目均会展示。
-- 全部报名成功的项目可在活动主项目的 [Issue 列表](https://github.com/M-China-Official/mcd-developer-innovation-challenge/issues)中查看。
+```
+以下为示意输出，实际结果以 MCP 实时返回为准。
 
-<div class="img"><img src="./images/image11.png" alt="" width="1000" /></div>
+附近共 3 家门店：
+1. XX 餐厅（约 500m，营业中）
+2. XX 甜品站（约 800m，营业中）
+3. XX 餐厅（约 1.2km，已打烊）
+```
 
-<div class="img"><img src="./images/image12.png" alt="" width="1000" /></div>
+**示例 2**
 
-### 定榜
+> 用户输入：
 
-活动于2026年10月25日23:59结束，并以2026年10月26日00:00采集的排行榜数据作为最终排名依据。原则上，排行榜前100个项目进入获奖范围；如第100个项目与后续项目的Star数相同，则所有同分项目均进入排行榜。
+```
+帮我算一下这两样东西加上我手上的券一共多少钱
+```
 
-## 获奖通知与奖品发放
+> 输出：
 
-### （1）邮箱获取
+```
+以下为示意输出，实际结果以 MCP 实时返回为准。
 
-麦当劳将尝试获取项目 Owner 的 GitHub 注册邮箱，用于发送获奖通知。若项目 Owner 已公开注册邮箱，麦当劳将直接读取公开邮箱；若注册邮箱未公开，麦当劳将通过 GitHub OAuth 授权机制发起授权申请，经项目 Owner 同意后读取其注册邮箱。
+商品原价：¥XX
+可用优惠：-¥XX
+配送费：¥XX
+应付总价：¥XX
+```
 
-<div class="img"><img src="./images/image13.png" alt="" width="1000" /></div>
+## 项目结构
 
-<div class="img"><img src="./images/image14.png" alt="" width="1000" /></div>
+```
+.
+├── README.md                  # 项目说明（本文件）
+├── CONTEST_DECLARATION.md     # 参赛声明（官方文件，内容不可修改）
+├── MCP_INTEGRATION.md         # MCP 接入与调用说明
+├── mcp-config.example.json    # 脱敏后的 MCP 配置示例（仅环境变量占位符）
+├── workbuddy.md               # WorkBuddy 开发上下文（联动奖励核验用）
+└── SKILL.md                   # Skill 主体定义
+```
 
-### （2）问卷填写
+## 注意事项
 
-获取邮箱后，我们将向该邮箱发送获奖通知及领奖信息收集问卷。问卷信息将用于发放实物奖品和电子奖励，请获奖者及时填写。
+- 本项目为参赛作品，由参赛者独立开发，**非麦当劳官方产品**。
+- 餐品、价格、优惠券、活动等信息以麦当劳官方渠道的实时结果为准，项目输出仅供参考。
+- MCP Token 每分钟限 600 次请求（超限返回 `429`），请合理控制调用频率。
 
-<div class="img"><img src="./images/获奖邮件（示例）.png" alt="获奖邮件示例" width="1000" /></div>
+## 许可证
 
-### （3）实物奖励
-
-进入排行榜的所有项目，每人还可获得以下实物周边，具体产品及包装以实物为准：
-
-<p align="center">
-  <img src="./images/汉堡回车键.png" alt="汉堡回车键玩具" width="45%" />
-  <img src="./images/实体徽章.png" alt="程序员节实体徽章" width="45%" />
-</p>
-
-<p align="center">
-  <strong>汉堡回车键玩具 × 1份　　程序员节实体徽章 × 1份</strong>
-</p>
-
-> 奖励机制具体以活动规则为准。
-
-### （4）电子奖励兑换
-
-前三名电子兑换券奖励：
-
-- 第1名：巨无霸汉堡50次免费兑换券1张
-- 第2名：巨无霸汉堡30次免费兑换券1张
-- 第3名：巨无霸汉堡20次免费兑换券1张
-
-WorkBuddy积分奖励：
-
-- 排行榜前100名作品（含前三名）：提交`workbuddy.md`即可获得3,000积分
-- 排行榜前3名：无论是否使用 WorkBuddy，均可获得10,240积分
-
-> 奖励机制具体以活动规则为准。
-
-### （5）其他
-
-麦当劳有权在活动期间及活动结束后的获奖审核、奖品发放过程中对参赛者的身份信息、资格以及是否符合活动规则要求的其他条件进行合理核验。如发现不符合参与资格要求或存在违反活动规则的其他要求，麦当劳有权在不事先通知的情况下自行取消该参赛者的参赛资格、获奖资格及相关奖励，如给麦当劳造成损失的，麦当劳还有权进一步追究赔偿责任。
+[MIT](./LICENSE)

@@ -1,0 +1,26 @@
+# 凭证 —— 切勿提交真实 Token / 密钥 / 账号信息
+.env
+.env.*
+!.env.example
+*.token
+mcp-config.json
+**/secrets/**
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# WorkBuddy 本地工作数据
+.workbuddy/
