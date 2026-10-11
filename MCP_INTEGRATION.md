@@ -1,153 +1,69 @@
 # MCP 集成说明
 
-本文档说明本项目使用的麦当劳 MCP Server、调用的 Tool、调用流程与业务价值。
+## 服务
 
-- **MCP Server：** 麦当劳中国 MCP（`https://mcp.mcd.cn`）
-- **传输协议：** Streamable HTTP
-- **鉴权方式：** `Authorization: Bearer ${MCD_MCP_TOKEN}`
-- **限流：** 600 次 / 分钟 / Token（超限返回 `429`）
-- **配置示例：** [`mcp-config.example.json`](./mcp-config.example.json)
+- MCP Server：麦当劳中国官方 MCP，`https://mcp.mcd.cn`，Streamable HTTP。
+- 鉴权：`Authorization: Bearer ${MCD_MCP_TOKEN}`，由 WorkBuddy 连接器保存，示例见 [mcp-config.example.json](mcp-config.example.json)。本项目代码不读取、不保存 Token。
+- 限流：每个 Token 每分钟 600 次。麦侦探一次完整计算通常只需约 15～40 次只读调用（门店 1、菜单 1、套餐详情 10～30、计价约 10）。
 
----
+## 分工
 
-## 1. 使用的 Tool
+| 角色 | 负责 |
+|---|---|
+| WorkBuddy（按 SKILL.md） | 理解需求、调用 MCP、整理菜单数据为 JSON、展示方案、确认后下单 |
+| `scripts/optimizer.py plan` | 按菜单价与套餐差价在本地精确搜索，选出约 10 个候选，生成可直接提交的计价参数 |
+| 官方 `calculate-price` | 给出每个候选的真实整单实付（含随单购卡费、优惠） |
+| `scripts/optimizer.py pick` | 校验官方回显，按实付排序，给出最多 3 个方案和展示文字 |
 
-本项目按「查询 → 核对 → 试算 → 下单」四个环节调用以下 Tool：
+## 使用的工具
 
-| MCP Tool | 在本项目中的作用 | 调用时机 |
+| 工具 | 用途 |
+|---|---|
+| `query-nearby-stores` | 按城市+关键词找到门店，取得 `storeCode` |
+| `query-meals` | 全店菜单：code、现价、原价、优惠类型、随单购条件 |
+| `query-meal-detail` | 套餐/双人餐/随心配的每轮选项、差价、默认特调 |
+| `available-coupons` / `auto-bind-coupons` | 查看并领取麦麦省免费券 |
+| `query-store-coupons` | 本店本单可用的券及适用商品 |
+| `calculate-price` | 候选方案官方计价；下单前复核价格，并取得 `takeWayList` |
+| `create-order` | 用户确认后创建订单，返回支付链接 |
+| `order-list` / `query-order` | 下单异常时核查是否已生成订单；支付后查状态 |
+| `cancel-order` | 取消重复生成的未支付订单 |
+
+## 调用链
+
+```text
+门店/位置 + 必须餐品
+  → query-nearby-stores → query-meals → query-meal-detail（相关套餐）
+  → available-coupons →（有则）auto-bind-coupons → query-store-coupons
+  → optimizer plan（本地精确搜索，约 10 个候选）
+  → calculate-price × 候选数
+  → optimizer pick（最多 3 个方案）→ 用户选择
+  → calculate-price 复核 → create-order（一次）→ 支付链接 → query-order
+```
+
+## 参数要点
+
+- 到店自取：`beType=1, orderType=1`，不传 `beCode`；得来速：`beType=5, orderType=1`，传门店的 `beCode`。
+- 套餐请求：`items[].roundList[] = {round: 轮次id字符串, comboItemList: [{code, quantity, modification?}]}`，每套数量乘以 `items[].quantity`；同一套餐不同选法拆成多行。
+- 特调：选项 `supportModify=true` 时按详情默认值传 `modification.values[]`，选中项用 `selectedKey`，同组含 `unselectedKey` 的未选项用 `unselectedKey`。
+- 随单购：菜单 `discountType` 为“随单购…”时，现价需在请求里带 `withOrder`（菜单 `specId` 对应请求 `membershipSpecId`）；不带则按原价。计价回显会多出一行卡商品，其小计计入整单 `data.price`。
+- 用券：`items[]` 上带 `couponId` 与 `couponCode`，一张券码一行。
+- 金额：计价返回的 `price / subtotal` 为整数分；整单实付取 `data.price`。
+- 下单：到店必须带 `takeWayCode`（计价返回的 `takeWayList[].code`，如 `eat-in` 堂食、`take-in-store` 外带）。
+
+## 真实调用记录（2026-10-11，只读）
+
+| 门店 | 必须餐品 | 官方整单实付 |
 |---|---|---|
-| `query-nearby-stores` | 取得用户附近的候选门店 | 用户未指定门店时，作为流程起点 |
-| `query-meals` | 取得门店当前可售卖的餐品清单 | 需要选品或核对餐品是否供应时 |
-| `query-meal-detail` | 取得套餐组成与可替换选项 | 需要确认套餐内容时 |
-| `query-my-coupons` | 取得账户下全部可用优惠券 | 试算前汇总可使用的券 |
-| `query-store-coupons` | 取得指定门店可用优惠券 | 已确定门店后，补充门店维度可用券 |
-| `available-coupons` | 取得麦麦省当前可领取的券 | 用户券不足时，提示是否有可领券 |
-| `calculate-price` | 计算商品金额、配送费、优惠金额与应付总价 | 输出最终价格前，做真实试算 |
-| `create-order` | 创建订单并返回订单详情与支付链接 | 用户确认方案后下单 |
-| `query-order` | 查询订单状态与内容 | 用户查看订单进度时 |
-| `now-time-info` | 取得当前日期与时间 | 需要判断营业时段、活动有效期时 |
+| 西安开元餐厅 1960622 | 3双层吉士汉堡＋2小杯玉米杯 | 全单点 ¥95.00；两份人气经典随心配（汉堡＋玉米杯）＋1个单点汉堡 ¥52.80 |
+| 西安开元餐厅 1960622 | 3龙焰鸡腿堡＋2奥利奥麦旋风 | 全单点 ¥103.00（9 种套餐/单点组合全部计价，单点最低；龙焰四件套选奥利奥麦旋风、不开卡时每份 ¥58） |
+| 西安开元餐厅 1960622 | 3麦香鸡＋2奥利奥麦旋风 | 全单点 ¥80.50；每多用一份随心配（麦香鸡＋玉米杯）少 ¥2.60、多一份玉米杯 |
+| 西安长和卜蜂中心 1960649 | 2汉堡＋几块麦乐鸡＋2块鸡翅＋1薯条 | 全明星双人分享餐八件套：不开卡 ¥114.50；随单开麦金卡体验卡（15天）¥59.80（套餐 ¥49.90＋卡 ¥9.90），多送中薯条×1、可乐中杯×2 |
 
-> 上表为当前基线，随功能迭代同步更新。
+这些记录验证了：套餐详情差价、随心配组合、随单购卡回显与卡费、按套数拆行的计价参数均与官方一致；菜单现价在不开卡时不可直接享受（八件套 ¥49.90 → 不开卡 ¥114.50）。当时测试账户与门店均无可用优惠券，用券计价与真实下单、支付链路尚未在真实订单上走通。
 
----
+## 业务价值与安全
 
-## 2. 调用流程
-
-### 场景 A：查询与试算（只读）
-
-```text
-用户输入
-  → Step 1. query-nearby-stores   # 确定候选门店
-  → Step 2. query-meals           # 取得该门店可售餐品
-  → Step 3. query-my-coupons      # 汇总账户可用券
-            query-store-coupons   # 汇总门店可用券
-  → Step 4. calculate-price       # 试算优惠金额与应付总价
-  → 输出：餐品清单 + 可用券 + 实付金额
-```
-
-### 场景 B：下单（有副作用，需用户确认）
-
-```text
-用户确认方案
-  → Step 1. calculate-price       # 复核最终价格
-  → Step 2. create-order          # 创建订单，取得支付链接
-  → Step 3. query-order           # 回查订单状态
-  → 输出：订单详情 + 支付链接
-```
-
-### 异常处理
-
-| 情况 | 处理方式 |
-|---|---|
-| `401` Token 无效 / 过期 | 提示用户重新申请并更新 Token |
-| `429` 触发限流 | 降低调用频率、合并请求后重试 |
-| 门店无可用餐品 / 券 | 回退到次优门店，或如实告知用户 |
-| 关键参数缺失（地址、门店等） | 先向用户确认，不臆造参数 |
-| 用户未确认即触发下单 | 拒绝执行，先复述方案并等待确认 |
-
----
-
-## 3. 业务价值
-
-- **对用户：** 把分散在多个入口的门店、菜单、优惠券、价格信息汇总到一次对话中，减少逐项查看与人工比对的成本。
-- **数据可靠性：** 价格、库存、券状态一律取自 MCP 实时返回，避免大模型凭既有知识给出失真的价格信息。
-- **可复用性：** 调用流程以 Skill 形式沉淀，同一套流程可直接迁移到其他支持 MCP 的 AI 客户端。
-
----
-
-## 4. 附：麦当劳 MCP 全量 Tool 清单
-
-供开发时选型参考（来源：[M-China/mcd-mcp-server](https://github.com/M-China/mcd-mcp-server)，按业务域归类）。
-
-### 门店与地址
-
-| Tool | 说明 |
-|---|---|
-| `query-nearby-stores` | 查询用户附近可用的麦当劳餐厅 |
-| `query-store-coupons` | 查询当前门店下可用的优惠券列表 |
-| `delivery-query-addresses` | 获取用户可配送地址列表 |
-| `delivery-create-address` | 新增配送地址 |
-| `delivery-query-stores` | 查询可配送的门店列表 |
-| `query-meal-assistance` | 查询助餐服务（企业团餐场景） |
-
-### 菜单与营养
-
-| Tool | 说明 |
-|---|---|
-| `query-meals` | 查询当前门店可售卖的餐品列表（分类、餐品编码、标签等） |
-| `query-meal-detail` | 按餐品编码查询餐品详情、套餐组成与可替换选项 |
-| `list-nutrition-foods` | 获取常见餐品的营养成分数据（能量、蛋白质、脂肪、碳水、钠、钙等） |
-
-### 价格与订单
-
-| Tool | 说明 |
-|---|---|
-| `calculate-price` | 根据选购列表（可含优惠券）计算金额、配送费、优惠金额与应付总价 |
-| `create-order` | 创建订单，返回订单详情与支付链接 |
-| `cancel-order` | 取消订单 |
-| `query-order` | 查询订单状态、内容、配送信息 |
-| `order-list` | 查询近期到店 / 外送历史订单 |
-
-### 优惠券与活动
-
-| Tool | 说明 |
-|---|---|
-| `available-coupons` | 查询当前可领取的麦麦省优惠券列表 |
-| `auto-bind-coupons` | 一键领取麦麦省全部当前可用优惠券 |
-| `query-my-coupons` | 查询账户下所有可用优惠券 |
-| `campaign-calendar` | 查询当月营销活动日历（进行中 / 往期 / 未来） |
-
-### 积分与麦麦商城
-
-| Tool | 说明 |
-|---|---|
-| `query-my-account` | 查询积分账户（可用、累计、冻结、即将过期积分） |
-| `mall-points-products` | 查询麦麦商城可积分兑换或现金购买的商品 |
-| `mall-product-detail` | 查询商城商品详情 |
-| `mall-create-order` | 积分兑换商品下单 |
-| `mall-order-list` | 查询麦麦商城近一年订单 |
-| `mall-order-detail` | 查询麦麦商城订单详情 |
-
-### 积分抽奖
-
-| Tool | 说明 |
-|---|---|
-| `query-lottery-info` | 查看积分抽奖活动信息（状态、奖品、消耗规则） |
-| `draw-lottery` | 执行一次积分抽奖 |
-| `query-my-prizes` | 查看我在抽奖活动中获得的奖品记录 |
-
-### 主题活动（派对 / 品鉴会）
-
-| Tool | 说明 |
-|---|---|
-| `query-party-city` | 查询主题活动可参与城市列表 |
-| `query-party-store` | 查询指定城市下可参与的门店 |
-| `query-partystore-date` | 查询指定门店可预约日期 |
-| `query-partystore-session` | 查询指定门店、日期下可预约场次 |
-| `party-order-create` | 创建主题活动订单 |
-
-### 基础
-
-| Tool | 说明 |
-|---|---|
-| `now-time-info` | 获取当前时间信息（供 LLM 判断日期 / 时段） |
+- 用户只说“想吃什么”，就能拿到这家店当下最省的点法，并清楚看到多送了什么、要不要开卡。
+- 只使用官方菜单、官方优惠与官方计价；不利用漏洞，不跨品牌比较。
+- 只读查询与领取免费券可自动进行；创建订单必须由用户确认，异常时先核查再处理，不自动重复下单。

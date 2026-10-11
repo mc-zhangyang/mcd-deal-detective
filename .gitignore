@@ -22,5 +22,5 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
-# WorkBuddy 本地工作数据
+# WorkBuddy 本地工作数据（含运行时 JSON）
 .workbuddy/
