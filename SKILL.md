@@ -1,11 +1,22 @@
 ---
+version: 1.0.0
 name: mcd-deal-detective
 agent_created: true
+display_name: 麦侦探
+display_name_en: McDonald's Deal Detective
 description: |
   麦侦探：吃麦当劳之前，在包含你指定餐品的前提下，算出怎么点最省钱。支持到店取餐和麦乐送。
   自动比较单点、套餐、套餐换选、双人/分享餐、优惠券和随单开卡，用官方实时计价给出最多 3 个方案，卡片上分块标出哪些是套餐、哪些单点。
   当用户说出门店/位置（或送餐地址）和想吃的东西（如“西安钟楼附近，2个汉堡、1份薯条”“点个麦乐送，怎么点最划算”）时使用。
   关键词：麦侦探、麦当劳怎么点划算、麦当劳省钱、套餐还是单点、麦当劳凑单、麦乐送怎么点划算。
+description_zh: |
+  说出想吃的和在哪吃，麦侦探用官方实时计价穷举单点、套餐、换选、双人/分享餐、优惠券和随单开卡的组合，
+  在“你点名的一样不少”的前提下给出最多 3 个最省方案，并写清每个方案怎么点、比单点省多少。支持到店取餐和麦乐送，只展示方案、不代下单。
+description_en: |
+  Tell it what you want to eat and where. Using official live pricing, it enumerates combinations of a la carte items, combos,
+  combo swaps, share boxes, coupons and on-the-spot membership cards, and returns up to three cheapest plans that still cover
+  everything you named, each with exact ordering steps and the saving versus ordering separately. Works for takeout and delivery;
+  it only shows plans and never places the order.
 ---
 
 # 麦侦探

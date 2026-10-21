@@ -1,5 +1,7 @@
 # mcd-deal-detective · 麦侦探
 
+<img src="assets/logo.png" width="140" alt="麦侦探 logo：放大镜下的汉堡与带降价箭头的价签">
+
 > 去麦当劳之前问一句：我想吃这些，怎么点最省钱？
 
 ![WorkBuddy Skill](https://img.shields.io/badge/WorkBuddy-Skill-blue) ![Python](https://img.shields.io/badge/python-3.9%2B-green) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
