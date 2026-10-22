@@ -50,13 +50,23 @@
 
 ## 在 WorkBuddy 里使用
 
-**1. 连接麦当劳 MCP**：在 [麦当劳 MCP 开放平台](https://open.mcd.cn/mcp) 申请 Token，到 WorkBuddy 连接器添加自定义 MCP，内容见 [mcp-config.example.json](mcp-config.example.json)，把 `${MCD_MCP_TOKEN}` 换成你的 Token。
+**1. 连接麦当劳 MCP**：在 [麦当劳 MCP 开放平台](https://open.mcd.cn/mcp) 申请 Token，到 WorkBuddy 连接器添加自定义 MCP，把 `${MCD_MCP_TOKEN}` 换成你的 Token：
 
-**2. 安装 Skill**（需要 Python 3.9+，无其他依赖）
-
-```bash
-git clone https://github.com/mc-zhangyang/mcd-deal-detective.git ~/.workbuddy/skills/mcd-deal-detective
+```json
+{
+  "mcpServers": {
+    "mcd-mcp": {
+      "type": "streamablehttp",
+      "url": "https://mcp.mcd.cn",
+      "headers": {
+        "Authorization": "Bearer ${MCD_MCP_TOKEN}"
+      }
+    }
+  }
+}
 ```
+
+**2. 安装 Skill**：在 WorkBuddy 左侧「技能」里搜索「麦侦探」，一键安装即可。
 
 **3. 直接说需求**
 
